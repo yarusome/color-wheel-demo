@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en-US">
+<head>
+<meta charset="utf-8">
+<title>Comparing color wheels</title>
+<style>body {
+  align-items: center;
+  display: flex;
+  margin: 0;
+}
+input {
+  width: 10rem;
+}
+label {
+  align-items: center;
+  display: none;
+  justify-content: space-between;
+}
+select {
+  width: 8rem;
+}
+#panel {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  margin: 0 2rem;
+  width: 16rem;
+}
+[data-color-func="hsl"] > [for="lightness"],
+[data-color-func="hsl"] > [for="saturation"],
+[data-color-func="hwb"] > [for="blackness"],
+[data-color-func="hwb"] > [for="whiteness"],
+[data-color-func="lch"] > [for="lightness"],
+[data-color-func="oklch"] > [for="lightness"],
+[for="color-func"] {
+  display: flex;
+}</style>
+</head>
+<body>
+<canvas width="300" height="300"></canvas>
+<div id="panel">
+<label for="color-func">Color function: <select id="color-func">
+<option value="hsl" selected>hsl()</option>
+<option value="hwb">hwb()</option>
+<option value="lch">lch()</option>
+<option value="oklch">oklch()</option>
+</select></label>
+<label for="blackness">Blackness: <input id="blackness" type="range"></label>
+<label for="lightness">Lightness: <input id="lightness" type="range"></label>
+<label for="saturation">Saturation: <input id="saturation" type="range"></label>
+<label for="whiteness">Whiteness: <input id="whiteness" type="range"></label>
+</div>
+<script>// Canvas
+const radius = 75;
+const scaleFactor = 2;
+
+const ctx = document.querySelector("canvas").getContext("2d");
+ctx.lineCap = "square";
+ctx.scale(scaleFactor, scaleFactor);
+ctx.translate(radius, radius);
+
+ctx.beginPath();
+ctx.arc(0, 0, radius, 0, Math.PI * 2);
+ctx.clip();
+
+function supportsColor(color) {
+  const div = document.createElement("div");
+  div.style["background-color"] = color;
+  return div.style["background-color"];
+}
+
+function drawColorWheel(colorFunc, params) {
+  let color;
+  switch (colorFunc) {
+    case "hsl":
+    case "hwb":
+      color = (hue) =>
+        `${colorFunc}(${hue} ${params[0]}% ${params[1]}%)`;
+      break;
+    case "lch":
+    case "oklch":
+      color = (hue, chroma) =>
+        `${colorFunc}(${params[0]}% ${chroma}% ${hue})`;
+      break;
+  }
+
+  const R = radius + 1; // To fill up the gap
+  ctx.clearRect(-R, -R, R * 2, R * 2);
+  if(!supportsColor(color(0, 0))) return;
+
+  for (let x = -R; x <= R; x++) {
+    for (let y = -R; y <= R; y++) {
+      const r = Math.hypot(x, y);
+      if (r <= R) {
+        const hue = Math.atan2(y, x) / Math.PI * 180 + 90;
+
+        ctx.strokeStyle = color(hue, r / R * 100);
+        ctx.beginPath();
+        ctx.moveTo(x, y);
+        ctx.lineTo(x, y);
+        ctx.stroke();
+      }
+    }
+  }
+}
+
+// Panel
+const panelDiv = document.getElementById("panel");
+const colorFuncSelect = document.getElementById("color-func");
+
+const inputs = Object.fromEntries(
+  ["blackness", "lightness", "saturation", "whiteness"].map(
+    (param) => [param, document.getElementById(param)]
+  )
+);
+
+function updateColorFunc() {
+  const colorFunc = colorFuncSelect.value;
+  panelDiv.dataset.colorFunc = colorFunc;
+
+  switch (colorFunc) {
+    case "hsl":
+      inputs.lightness.value = "50";
+      inputs.saturation.value = "100";
+      break;
+    case "hwb":
+      inputs.blackness.value = "0";
+      inputs.whiteness.value = "0";
+      break;
+    case "lch":
+    case "oklch":
+      inputs.lightness.value = "50";
+      break;
+    default:
+      console.error("Unknown function name");
+  }
+}
+
+function updateValue() {
+  const colorFunc = colorFuncSelect.value;
+  const draw = drawColorWheel.bind(null, colorFunc);
+
+  switch (colorFunc) {
+    case "hsl":
+      draw([inputs.saturation.value, inputs.lightness.value]);
+      break;
+    case "hwb":
+      draw([inputs.whiteness.value, inputs.blackness.value]);
+      break;
+    case "lch":
+    case "oklch":
+      draw([inputs.lightness.value]);
+      break;
+  }
+}
+
+colorFuncSelect.addEventListener("input", updateColorFunc);
+panelDiv.addEventListener("input", updateValue);
+
+colorFuncSelect.dispatchEvent(
+  new Event("input", {bubbles: true})
+);</script>
+</body>

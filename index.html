@@ -50,18 +50,46 @@ select {
 <label for="saturation">Saturation: <input id="saturation" type="range"></label>
 <label for="whiteness">Whiteness: <input id="whiteness" type="range"></label>
 </div>
-<script>// Canvas
+<script>// CANVAS
+
 const radius = 75;
 const scaleFactor = 2;
+
+// Generate point coordinates and corresponding hues and chromas
+const points = [...Array((radius * 2 + 1) ** 2)]
+  .map(
+    (item, i) => [
+      Math.floor(i / (radius * 2 + 1)) - radius,
+      i % (radius * 2 + 1) - radius
+    ]
+  )
+  .map(
+    (item) => [
+      ...item,
+      Math.atan2(item[1], item[0]) / Math.PI * 180 + 90,
+      Math.hypot(...item) / radius * 100
+    ]
+  )
+  .filter((item) => item[3] <= 100);
 
 const ctx = document.querySelector("canvas").getContext("2d");
 ctx.lineCap = "square";
 ctx.scale(scaleFactor, scaleFactor);
 ctx.translate(radius, radius);
 
-ctx.beginPath();
-ctx.arc(0, 0, radius, 0, Math.PI * 2);
-ctx.clip();
+// Generate a color function with given paramters other than hue and chroma
+function genColorFunc(colorFunc, params) {
+  switch (colorFunc) {
+    case "hsl":
+    case "hwb":
+      return (hue) =>
+        `${colorFunc}(${hue} ${params[0]}% ${params[1]}%)`;
+    case "lch":
+    case "oklch":
+      return (hue, chroma) =>
+        `${colorFunc}(${params[0]}% ${chroma}% ${hue})`;
+  }
+}
 
 function supportsColor(color) {
   const div = document.createElement("div");
@@ -70,41 +98,34 @@ function supportsColor(color) {
 }
 
 function drawColorWheel(colorFunc, params) {
-  let color;
-  switch (colorFunc) {
-    case "hsl":
-    case "hwb":
-      color = (hue) =>
-        `${colorFunc}(${hue} ${params[0]}% ${params[1]}%)`;
-      break;
-    case "lch":
-    case "oklch":
-      color = (hue, chroma) =>
-        `${colorFunc}(${params[0]}% ${chroma}% ${hue})`;
-      break;
-  }
+  const color = genColorFunc(colorFunc, params);
 
-  const R = radius + 1; // To fill up the gap
-  ctx.clearRect(-R, -R, R * 2, R * 2);
+  ctx.clearRect(-radius, -radius, radius * 2, radius * 2);
   if(!supportsColor(color(0, 0))) return;
 
-  for (let x = -R; x <= R; x++) {
-    for (let y = -R; y <= R; y++) {
-      const r = Math.hypot(x, y);
-      if (r <= R) {
-        const hue = Math.atan2(y, x) / Math.PI * 180 + 90;
+  for(const point of points) {
+    const [x, y, hue, chroma] = point;
 
-        ctx.strokeStyle = color(hue, r / R * 100);
-        ctx.beginPath();
-        ctx.moveTo(x, y);
-        ctx.lineTo(x, y);
-        ctx.stroke();
-      }
-    }
+    ctx.strokeStyle = color(hue, chroma);
+    ctx.beginPath();
+    ctx.moveTo(x, y);
+    ctx.lineTo(x, y);
+    ctx.stroke();
   }
+
+  // Clear anti-alias artifacts
+  ctx.save();
+  ctx.globalCompositeOperation = "destination-out";
+
+  ctx.beginPath();
+  ctx.arc(0, 0, radius, 0, Math.PI * 2);
+  ctx.stroke();
+
+  ctx.restore();
 }
 
-// Panel
+// PANEL
+
 const panelDiv = document.getElementById("panel");
 const colorFuncSelect = document.getElementById("color-func");
 
@@ -156,6 +177,8 @@ function updateValue() {
 
 colorFuncSelect.addEventListener("input", updateColorFunc);
 panelDiv.addEventListener("input", updateValue);
+
+// INIT
 
 colorFuncSelect.dispatchEvent(
   new Event("input", {bubbles: true})

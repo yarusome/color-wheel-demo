@@ -101,9 +101,9 @@ function drawColorWheel(colorFunc, params) {
   const color = genColorFunc(colorFunc, params);
 
   ctx.clearRect(-radius, -radius, radius * 2, radius * 2);
-  if(!supportsColor(color(0, 0))) return;
+  if (!supportsColor(color(0, 0))) return;
 
-  for(const point of points) {
+  for (const point of points) {
     const [x, y, hue, chroma] = point;
 
     ctx.strokeStyle = color(hue, chroma);

@@ -116,9 +116,10 @@ function drawColorWheel(colorFunc, params) {
   // Clear anti-alias artifacts
   ctx.save();
   ctx.globalCompositeOperation = "destination-out";
+  ctx.lineWidth = 2;
 
   ctx.beginPath();
-  ctx.arc(0, 0, radius, 0, Math.PI * 2);
+  ctx.arc(0, 0, radius + 0.5, 0, Math.PI * 2);
   ctx.stroke();
 
   ctx.restore();

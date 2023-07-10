@@ -26,20 +26,20 @@ select {
   margin: 0 2rem;
   width: 16rem;
 }
-[data-color-func="hsl"] > [for="lightness"],
-[data-color-func="hsl"] > [for="saturation"],
-[data-color-func="hwb"] > [for="blackness"],
-[data-color-func="hwb"] > [for="whiteness"],
-[data-color-func="lch"] > [for="lightness"],
-[data-color-func="oklch"] > [for="lightness"],
-[for="color-func"] {
+[data-color-fn="hsl"] > [for="lightness"],
+[data-color-fn="hsl"] > [for="saturation"],
+[data-color-fn="hwb"] > [for="blackness"],
+[data-color-fn="hwb"] > [for="whiteness"],
+[data-color-fn="lch"] > [for="lightness"],
+[data-color-fn="oklch"] > [for="lightness"],
+[for="color-fn"] {
   display: flex;
 }</style>
 </head>
 <body>
 <canvas width="300" height="300"></canvas>
 <div id="panel">
-<label for="color-func">Color function: <select id="color-func">
+<label for="color-fn">Color function: <select id="color-fn">
 <option value="hsl" selected>hsl()</option>
 <option value="hwb">hwb()</option>
 <option value="lch">lch()</option>
@@ -56,18 +56,17 @@ const radius = 75;
 const scaleFactor = 2;
 
 // Generate point coordinates and corresponding hues and chromas
-const points = [...Array((radius * 2 + 1) ** 2)]
-  .map(
+const points = [...Array((radius * 2 + 1) ** 2)].map(
     (item, i) => [
       Math.floor(i / (radius * 2 + 1)) - radius,
-      i % (radius * 2 + 1) - radius
+      i % (radius * 2 + 1) - radius,
     ]
   )
   .map(
     (item) => [
       ...item,
       Math.atan2(item[1], item[0]) / Math.PI * 180 + 90,
-      Math.hypot(...item) / radius * 100
+      Math.hypot(...item) / radius * 100,
     ]
   )
   .filter((item) => item[3] <= 100);
@@ -78,16 +77,16 @@ ctx.scale(scaleFactor, scaleFactor);
 ctx.translate(radius, radius);
 
 // Generate a color function with given paramters other than hue and chroma
-function genColorFunc(colorFunc, params) {
-  switch (colorFunc) {
+function genColorFn(colorFn, params) {
+  switch (colorFn) {
     case "hsl":
     case "hwb":
       return (hue) =>
-        `${colorFunc}(${hue} ${params[0]}% ${params[1]}%)`;
+        `${colorFn}(${hue} ${params[0]}% ${params[1]}%)`;
     case "lch":
     case "oklch":
       return (hue, chroma) =>
-        `${colorFunc}(${params[0]}% ${chroma}% ${hue})`;
+        `${colorFn}(${params[0]}% ${chroma}% ${hue})`;
   }
 }
 
@@ -97,15 +96,13 @@ function supportsColor(color) {
   return div.style["background-color"];
 }
 
-function drawColorWheel(colorFunc, params) {
-  const color = genColorFunc(colorFunc, params);
+function drawColorWheel(colorFn, params) {
+  const color = genColorFn(colorFn, params);
 
   ctx.clearRect(-radius, -radius, radius * 2, radius * 2);
   if (!supportsColor(color(0, 0))) return;
 
-  for (const point of points) {
-    const [x, y, hue, chroma] = point;
-
+  for (const [x, y, hue, chroma] of points) {
     ctx.strokeStyle = color(hue, chroma);
     ctx.beginPath();
     ctx.moveTo(x, y);
@@ -128,7 +125,7 @@ function drawColorWheel(colorFunc, params) {
 // PANEL
 
 const panelDiv = document.getElementById("panel");
-const colorFuncSelect = document.getElementById("color-func");
+const colorFnSelect = document.getElementById("color-fn");
 
 const inputs = Object.fromEntries(
   ["blackness", "lightness", "saturation", "whiteness"].map(
@@ -136,11 +133,11 @@ const inputs = Object.fromEntries(
   )
 );
 
-function updateColorFunc() {
-  const colorFunc = colorFuncSelect.value;
-  panelDiv.dataset.colorFunc = colorFunc;
+function updateColorFn() {
+  const colorFn = colorFnSelect.value;
+  panelDiv.dataset.colorFn = colorFn;
 
-  switch (colorFunc) {
+  switch (colorFn) {
     case "hsl":
       inputs.lightness.value = "50";
       inputs.saturation.value = "100";
@@ -159,10 +156,10 @@ function updateColorFunc() {
 }
 
 function updateValue() {
-  const colorFunc = colorFuncSelect.value;
-  const draw = drawColorWheel.bind(null, colorFunc);
+  const colorFn = colorFnSelect.value;
+  const draw = drawColorWheel.bind(null, colorFn);
 
-  switch (colorFunc) {
+  switch (colorFn) {
     case "hsl":
       draw([inputs.saturation.value, inputs.lightness.value]);
       break;
@@ -176,12 +173,12 @@ function updateValue() {
   }
 }
 
-colorFuncSelect.addEventListener("input", updateColorFunc);
+colorFnSelect.addEventListener("input", updateColorFn);
 panelDiv.addEventListener("input", updateValue);
 
 // INIT
 
-colorFuncSelect.dispatchEvent(
+colorFnSelect.dispatchEvent(
   new Event("input", {bubbles: true})
 );</script>
 </body>
